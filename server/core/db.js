@@ -8,6 +8,7 @@ const Objection = require('objection')
 
 const migrationSource = require('../db/migrator-source')
 const migrateFromBeta = require('../db/beta')
+const sslCaHelper = require('../helpers/ssl-ca')
 
 /* global WIKI */
 
@@ -62,15 +63,10 @@ module.exports = {
 
     // Handle inline SSL CA Certificate mode
     if (!_.isEmpty(process.env.DB_SSL_CA)) {
-      const chunks = []
-      for (let i = 0, charsLength = process.env.DB_SSL_CA.length; i < charsLength; i += 64) {
-        chunks.push(process.env.DB_SSL_CA.substring(i, i + 64))
-      }
-
       dbUseSSL = true
       sslOptions = {
         rejectUnauthorized: true,
-        ca: '-----BEGIN CERTIFICATE-----\n' + chunks.join('\n') + '\n-----END CERTIFICATE-----\n'
+        ca: sslCaHelper.resolve(process.env.DB_SSL_CA, WIKI.ROOTPATH)
       }
     }
 

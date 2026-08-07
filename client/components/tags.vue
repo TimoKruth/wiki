@@ -1,7 +1,16 @@
 <template lang='pug'>
   v-app(:dark='$vuetify.theme.dark').tags
     nav-header
-    v-navigation-drawer.pb-0.elevation-1(app, fixed, clipped, :right='$vuetify.rtl', permanent, width='300')
+    v-navigation-drawer.pb-0.elevation-1(
+      app
+      fixed
+      clipped
+      :right='$vuetify.rtl'
+      v-model='drawerShown'
+      :permanent='$vuetify.breakpoint.mdAndUp'
+      :temporary='$vuetify.breakpoint.smAndDown'
+      width='300'
+    )
       vue-scroll(:ops='scrollStyle')
         v-list(dense, nav)
           v-list-item(href='/')
@@ -16,7 +25,14 @@
                 v-icon(v-else) mdi-checkbox-blank-outline
               v-list-item-title {{tag.title}}
     v-content.grey(:class='$vuetify.theme.dark ? `darken-4-d5` : `lighten-3`')
-      v-toolbar(color='primary', dark, flat, height='58')
+      v-toolbar.tags-selection-toolbar(color='primary', dark, flat, height='auto')
+        v-btn.mr-2(
+          v-if='$vuetify.breakpoint.smAndDown'
+          icon
+          @click='drawerShown = true'
+          :aria-label='$t(`tags:selectOneMoreTags`)'
+        )
+          v-icon mdi-tag-multiple
         template(v-if='selection.length > 0')
           .overline.mr-3.animated.fadeInLeft {{$t('tags:currentSelection')}}
           v-chip.mr-3.primary--text(
@@ -39,7 +55,7 @@
         template(v-else)
           v-icon.mr-3.animated.fadeInRight mdi-arrow-left
           .overline.animated.fadeInRight {{$t('tags:selectOneMoreTags')}}
-      v-toolbar(:color='$vuetify.theme.dark ? `grey darken-4-l5` : `grey lighten-4`', flat, height='58')
+      v-toolbar.tags-filter-toolbar(:color='$vuetify.theme.dark ? `grey darken-4-l5` : `grey lighten-4`', flat, height='auto')
         v-text-field.tags-search(
           v-model='innerSearch'
           :label='$t(`tags:searchWithinResultsPlaceholder`)'
@@ -56,7 +72,7 @@
         template(v-if='locales.length > 1')
           v-divider.mx-3(vertical)
           .overline {{$t('tags:locale')}}
-          v-select.ml-2(
+          v-select.ml-2.tags-filter-select(
             :items='locales'
             v-model='locale'
             :background-color='$vuetify.theme.dark ? `grey darken-3` : `white`'
@@ -72,7 +88,7 @@
           )
         v-divider.mx-3(vertical)
         .overline {{$t('tags:orderBy')}}
-        v-select.ml-2(
+        v-select.ml-2.tags-filter-select(
           :items='orderByItems'
           v-model='orderBy'
           :background-color='$vuetify.theme.dark ? `grey darken-3` : `white`'
@@ -84,7 +100,7 @@
           height='40'
           style='max-width: 250px;'
         )
-        v-btn-toggle.ml-2(v-model='orderByDirection', rounded, mandatory)
+        v-btn-toggle.ml-2.tags-direction(v-model='orderByDirection', rounded, mandatory)
           v-btn(text, height='40'): v-icon(size='20') mdi-chevron-double-up
           v-btn(text, height='40'): v-icon(size='20') mdi-chevron-double-down
       v-divider
@@ -170,6 +186,7 @@ export default {
   data() {
     return {
       tags: [],
+      drawerShown: false,
       selection: [],
       innerSearch: '',
       locale: 'any',
@@ -237,6 +254,9 @@ export default {
     orderByDirection (newValue, oldValue) {
       this.rebuildURL()
       this.pagination.sortDesc = [newValue === 1]
+    },
+    '$vuetify.breakpoint.mdAndUp' (isDesktop) {
+      this.drawerShown = isDesktop
     }
   },
   router,
@@ -245,6 +265,7 @@ export default {
     this.selection = _.compact(decodeURI(this.$route.path).split('/'))
   },
   mounted () {
+    this.drawerShown = this.$vuetify.breakpoint.mdAndUp
     this.locales = _.concat(
       [{name: this.$t('tags:localeAny'), code: 'any'}],
       (siteLangs.length > 0 ? siteLangs : [])
@@ -294,7 +315,7 @@ export default {
       this.$router.push(urlObj)
     },
     goTo (page) {
-      window.location.assign(`/${page.locale}/${page.path}`)
+      window.location.assign(siteLangs.length > 0 ? `/${page.locale}/${page.path}` : `/${page.path}`)
     }
   },
   apollo: {
@@ -330,11 +351,48 @@ export default {
 
 <style lang='scss'>
 .tags-search {
+  flex: 1 1 240px;
+
   .v-input__control {
     min-height: initial !important;
   }
   .v-input__prepend-outer {
     margin-top: 8px !important;
+  }
+}
+
+.tags-selection-toolbar, .tags-filter-toolbar {
+  min-height: 58px;
+
+  .v-toolbar__content {
+    flex-wrap: wrap;
+    gap: 8px;
+    height: auto !important;
+    min-height: 58px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .tags-filter-toolbar {
+    .tags-search {
+      flex-basis: 100%;
+    }
+
+    .v-divider, .overline {
+      display: none;
+    }
+
+    .tags-filter-select {
+      flex: 1 1 calc(50% - 8px);
+      margin-left: 0 !important;
+      max-width: none !important;
+    }
+
+    .tags-direction {
+      margin-left: 0 !important;
+    }
   }
 }
 </style>

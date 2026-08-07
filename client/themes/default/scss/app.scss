@@ -556,7 +556,7 @@
 
           @at-root .is-rtl & {
             border-left-color: mc('grey', '200');
-            border-right-width: mc('blue', '500');
+            border-right-color: mc('blue', '500');
           }
         }
 
@@ -565,7 +565,12 @@
           display: none;
         }
 
-        > a {
+        > p {
+          margin: 0;
+          padding: 0;
+        }
+
+        > a, > p > a {
           display: block;
           text-decoration: none;
           margin: -1rem;
@@ -580,11 +585,26 @@
             border-left: 1px solid mc('grey', '300');
             margin-left: .5rem;
 
+            @at-root .is-rtl & {
+              padding-right: .5rem;
+              padding-left: 0;
+              border-right: 1px solid mc('grey', '300');
+              border-left: none;
+              margin-right: .5rem;
+              margin-left: 0;
+            }
+
             &.is-block {
               display: block;
               padding-left: 0;
               margin-left: 0;
               border-left: none;
+
+              @at-root .is-rtl & {
+                padding-right: 0;
+                margin-right: 0;
+                border-right: none;
+              }
             }
           }
         }
@@ -614,7 +634,7 @@
 
             @at-root .theme--dark.is-rtl & {
               border-left-color: mc('grey', '900');
-              border-right-width: mc('indigo', '300');
+              border-right-color: mc('indigo', '300');
             }
           }
         }

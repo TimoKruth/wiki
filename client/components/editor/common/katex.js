@@ -1,5 +1,7 @@
 // Test if potential opening or closing delimieter
 // Assumes that there is a "$" at state.src[pos]
+const ATTRS_SENTINEL = '\u200B'
+
 function isValidDelim (state, pos) {
   let prevChar
   let nextChar
@@ -27,6 +29,10 @@ function isValidDelim (state, pos) {
 }
 
 export default {
+  getContent (content) {
+    return content.endsWith(ATTRS_SENTINEL) ? content.slice(0, -ATTRS_SENTINEL.length) : content
+  },
+
   katexInline (state, silent) {
     let start, match, token, res, pos
 
@@ -81,14 +87,8 @@ export default {
     if (!silent) {
       token = state.push('katex_inline', 'math', 0)
       token.markup = '$'
-      token.content = state.src
-        // Extract the math part without the $
-        .slice(start, match)
-        // Escape the curly braces since they will be interpreted as
-        // attributes by markdown-it-attrs (the "curly_attributes"
-        // core rule)
-        .replaceAll("{", "{{")
-        .replaceAll("}", "}}")
+      // Prevent markdown-it-attrs from treating trailing TeX braces as attributes.
+      token.content = state.src.slice(start, match) + ATTRS_SENTINEL
     }
 
     state.pos = match + 1

@@ -1,5 +1,7 @@
 const mjax = require('mathjax')
 
+const ATTRS_SENTINEL = '\u200B'
+
 /* global WIKI */
 
 // ------------------------------------
@@ -37,14 +39,15 @@ module.exports = {
     if (conf.useInline) {
       mdinst.inline.ruler.after('escape', 'mathjax_inline', mathjaxInline)
       mdinst.renderer.rules.mathjax_inline = (tokens, idx) => {
+        const content = stripAttrsSentinel(tokens[idx].content)
         try {
-          const result = MathJax.tex2svg(tokens[idx].content, {
+          const result = MathJax.tex2svg(content, {
             display: false
           })
           return MathJax.startup.adaptor.innerHTML(result)
         } catch (err) {
           WIKI.logger.warn(err)
-          return tokens[idx].content
+          return content
         }
       }
     }
@@ -149,11 +152,16 @@ function mathjaxInline (state, silent) {
   if (!silent) {
     token = state.push('mathjax_inline', 'math', 0)
     token.markup = '$'
-    token.content = state.src.slice(start, match)
+    // Prevent markdown-it-attrs from treating trailing TeX braces as attributes.
+    token.content = state.src.slice(start, match) + ATTRS_SENTINEL
   }
 
   state.pos = match + 1
   return true
+}
+
+function stripAttrsSentinel (content) {
+  return content.endsWith(ATTRS_SENTINEL) ? content.slice(0, -ATTRS_SENTINEL.length) : content
 }
 
 function mathjaxBlock (state, start, end, silent) {

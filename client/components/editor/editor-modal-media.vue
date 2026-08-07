@@ -142,7 +142,7 @@
                 :label-idle='$t(`editor:assets.uploadAssetsDropZone`)'
                 allow-multiple='true'
                 :files='files'
-                max-files='10'
+                :max-files='siteConfig.uploadMaxFiles'
                 :server='filePondServerOpts'
                 :instant-upload='false'
                 :allow-revert='false'
@@ -150,7 +150,7 @@
               )
             v-divider
             v-card-actions.pa-3
-              .caption.grey--text.text-darken-2 Max 10 files, 5 MB each
+              .caption.grey--text.text-darken-2 Max {{siteConfig.uploadMaxFiles}} files, {{siteConfig.uploadMaxFileSize | prettyBytes}} each
               v-spacer
               v-btn.px-4(color='teal', dark, @click='upload') {{$t('common:actions.upload')}}
 
@@ -240,6 +240,8 @@ import createAssetFolderMutation from 'gql/editor/editor-media-mutation-folder-c
 import renameAssetMutation from 'gql/editor/editor-media-mutation-asset-rename.gql'
 import deleteAssetMutation from 'gql/editor/editor-media-mutation-asset-delete.gql'
 
+/* global siteConfig */
+
 const FilePond = vueFilePond()
 const localeSegmentRegex = /^[A-Z]{2}(-[A-Z]{2})?$/i
 const disallowedFolderChars = /[A-Z()=.!@#$%?&*+`~<>,;:\\/[\]¬{| ]/
@@ -282,6 +284,9 @@ export default {
     }
   },
   computed: {
+    siteConfig () {
+      return siteConfig
+    },
     isShown: {
       get() { return this.value },
       set(val) { this.$emit('input', val) }
@@ -371,6 +376,7 @@ export default {
     insert () {
       const asset = _.find(this.assets, ['id', this.currentFileId])
       const assetPath = this.folderTree.map(f => f.slug).join('/')
+      // eslint-disable-next-line vue/custom-event-name-casing
       this.$root.$emit('editorInsert', {
         kind: asset.kind,
         path: this.currentFolderId > 0 ? `/${assetPath}/${asset.filename}` : `/${asset.filename}`,

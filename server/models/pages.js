@@ -848,7 +848,7 @@ module.exports = class Page extends Model {
    * @returns {Promise} Promise with no value
    */
   static async reconnectLinks (opts) {
-    const pageHref = `/${opts.locale}/${opts.path}`
+    const pageHref = pageHelper.getPageHref({ locale: opts.locale, path: opts.path })
     let replaceArgs = {
       from: '',
       to: ''
@@ -859,7 +859,7 @@ module.exports = class Page extends Model {
         replaceArgs.to = `<a href="${pageHref}" class="is-internal-link is-valid-page">`
         break
       case 'move':
-        const prevPageHref = `/${opts.sourceLocale}/${opts.sourcePath}`
+        const prevPageHref = pageHelper.getPageHref({ locale: opts.sourceLocale, path: opts.sourcePath })
         replaceArgs.from = `<a href="${prevPageHref}" class="is-internal-link is-valid-page">`
         replaceArgs.to = `<a href="${pageHref}" class="is-internal-link is-valid-page">`
         break

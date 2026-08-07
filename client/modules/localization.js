@@ -12,18 +12,24 @@ import localeQuery from 'gql/common/common-localization-query-translations.gql'
 export default {
   VueI18Next,
   init() {
+    let localStorageOptions = null
+    try {
+      if (window.localStorage) {
+        localStorageOptions = {
+          expirationTime: 1000 * 60 * 60 * 24,
+          store: window.localStorage
+        }
+      }
+    } catch (err) {
+      // Web Storage can be denied by browser privacy settings.
+    }
     i18next
       .use(Backend)
       .init({
         backend: {
-          backends: [
-            LocalStorageBackend,
-            i18nextXHR
-          ],
+          backends: localStorageOptions ? [LocalStorageBackend, i18nextXHR] : [i18nextXHR],
           backendOptions: [
-            {
-              expirationTime: 1000 * 60 * 60 * 24 // 24h
-            },
+            ...(localStorageOptions ? [localStorageOptions] : []),
             {
               loadPath: '{{lng}}/{{ns}}',
               parse: (data) => data,

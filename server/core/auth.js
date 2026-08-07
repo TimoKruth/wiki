@@ -162,7 +162,8 @@ module.exports = {
           res.set('Cache-Control', 'no-store')
         } catch (errc) {
           WIKI.logger.warn(errc)
-          return next()
+          user = null
+          res.clearCookie('jwt', commonHelper.getCookieOpts())
         }
       }
 

@@ -6,6 +6,7 @@ const CSR = require('@root/csr')
 const PEM = require('@root/pem')
 // eslint-disable-next-line node/no-deprecated-api
 const punycode = require('punycode')
+const sslHelper = require('../helpers/ssl')
 
 /* global WIKI */
 
@@ -13,16 +14,17 @@ module.exports = {
   apiDirectory: WIKI.dev ? 'https://acme-staging-v02.api.letsencrypt.org/directory' : 'https://acme-v02.api.letsencrypt.org/directory',
   acme: null,
   async init () {
+    const certificateExpiration = sslHelper.getCertificateExpiration(_.get(WIKI.config.letsencrypt, 'payload.cert', null)) || _.get(WIKI.config.letsencrypt, 'payload.expires', null)
     if (!_.get(WIKI.config, 'letsencrypt.payload', false)) {
       await this.requestCertificate()
     } else if (WIKI.config.letsencrypt.domain !== WIKI.config.ssl.domain) {
       WIKI.logger.info(`(LETSENCRYPT) Domain has changed. Requesting new certificates...`)
       await this.requestCertificate()
-    } else if (moment(WIKI.config.letsencrypt.payload.expires).isSameOrBefore(moment().add(5, 'days'))) {
+    } else if (moment(certificateExpiration).isSameOrBefore(moment().add(5, 'days'))) {
       WIKI.logger.info(`(LETSENCRYPT) Certificate is about to or has expired, requesting a new one...`)
       await this.requestCertificate()
     } else {
-      WIKI.logger.info(`(LETSENCRYPT) Using existing certificate for ${WIKI.config.ssl.domain}, expires on ${WIKI.config.letsencrypt.payload.expires}: [ OK ]`)
+      WIKI.logger.info(`(LETSENCRYPT) Using existing certificate for ${WIKI.config.ssl.domain}, expires on ${certificateExpiration}: [ OK ]`)
     }
     WIKI.config.ssl.format = 'pem'
     WIKI.config.ssl.inline = true

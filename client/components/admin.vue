@@ -230,6 +230,11 @@ export default {
       query: statsQuery,
       fetchPolicy: 'network-only',
       manual: true,
+      variables () {
+        return {
+          manageSystem: this.hasPermission('manage:system')
+        }
+      },
       result({ data, loading, networkStatus }) {
         this.info = data.system.info
       },
