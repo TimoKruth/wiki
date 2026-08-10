@@ -2,6 +2,7 @@ const _ = require('lodash')
 const cheerio = require('cheerio')
 const uslug = require('uslug')
 const pageHelper = require('../../../helpers/page')
+const mediaHelper = require('../../../helpers/media')
 const URL = require('url').URL
 
 const mustacheRegExp = /(\{|&#x7b;?){2}(.+?)(\}|&#x7d;?){2}/i
@@ -263,6 +264,12 @@ module.exports = {
     $ = cheerio.load(output, {
       decodeEntities: true
     })
+
+    // --------------------------------
+    // Render trusted WYSIWYG media embeds
+    // --------------------------------
+
+    mediaHelper.renderEmbeds($)
 
     function iterateMustacheNode (node) {
       $(node).contents().each((idx, item) => {
