@@ -9,6 +9,7 @@ const graphHelper = require('../../helpers/graph')
 const request = require('request-promise')
 const crypto = require('crypto')
 const nanoid = require('nanoid/non-secure').customAlphabet('1234567890abcdef', 10)
+const sslHelper = require('../../helpers/ssl')
 
 const getosAsync = require('util').promisify(getos)
 
@@ -391,7 +392,17 @@ module.exports = {
       return WIKI.config.ssl.enabled && WIKI.config.ssl.provider === `letsencrypt` ? WIKI.config.ssl.domain : null
     },
     sslExpirationDate () {
-      return WIKI.config.ssl.enabled && WIKI.config.ssl.provider === `letsencrypt` ? _.get(WIKI.config.letsencrypt, 'payload.expires', null) : null
+      if (!WIKI.config.ssl.enabled) {
+        return null
+      }
+      try {
+        const certificate = WIKI.config.ssl.inline ?
+          WIKI.config.ssl.cert :
+          fs.readFileSync(WIKI.config.ssl.cert)
+        return sslHelper.getCertificateExpiration(certificate)
+      } catch (err) {
+        return null
+      }
     },
     sslProvider () {
       return WIKI.config.ssl.enabled ? WIKI.config.ssl.provider : null

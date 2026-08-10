@@ -1,6 +1,8 @@
 const katex = require('katex')
 const chemParse = require('./mhchem')
 
+const ATTRS_SENTINEL = '\u200B'
+
 /* global WIKI */
 
 // ------------------------------------
@@ -28,13 +30,14 @@ module.exports = {
     if (conf.useInline) {
       mdinst.inline.ruler.after('escape', 'katex_inline', katexInline)
       mdinst.renderer.rules.katex_inline = (tokens, idx) => {
+        const content = stripAttrsSentinel(tokens[idx].content)
         try {
-          return katex.renderToString(tokens[idx].content, {
+          return katex.renderToString(content, {
             displayMode: false, macros
           })
         } catch (err) {
           WIKI.logger.warn(err)
-          return tokens[idx].content
+          return content
         }
       }
     }
@@ -138,11 +141,16 @@ function katexInline (state, silent) {
   if (!silent) {
     token = state.push('katex_inline', 'math', 0)
     token.markup = '$'
-    token.content = state.src.slice(start, match)
+    // Prevent markdown-it-attrs from treating trailing TeX braces as attributes.
+    token.content = state.src.slice(start, match) + ATTRS_SENTINEL
   }
 
   state.pos = match + 1
   return true
+}
+
+function stripAttrsSentinel (content) {
+  return content.endsWith(ATTRS_SENTINEL) ? content.slice(0, -ATTRS_SENTINEL.length) : content
 }
 
 function katexBlock (state, start, end, silent) {

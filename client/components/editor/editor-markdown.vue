@@ -248,7 +248,7 @@ Prism.plugins.NormalizeWhitespace.setDefaults({
 // Markdown Instance
 const md = new MarkdownIt({
   html: true,
-  breaks: true,
+  breaks: siteConfig.markdownLinebreaks !== false,
   linkify: true,
   typography: true,
   highlight(str, lang) {
@@ -327,13 +327,14 @@ plantuml.init(md, {})
 const macros = {}
 md.inline.ruler.after('escape', 'katex_inline', katexHelper.katexInline)
 md.renderer.rules.katex_inline = (tokens, idx) => {
+  const content = katexHelper.getContent(tokens[idx].content)
   try {
-    return katex.renderToString(tokens[idx].content, {
+    return katex.renderToString(content, {
       displayMode: false, macros
     })
   } catch (err) {
     console.warn(err)
-    return tokens[idx].content
+    return content
   }
 }
 md.block.ruler.after('blockquote', 'katex_block', katexHelper.katexBlock, {

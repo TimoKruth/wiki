@@ -731,6 +731,16 @@ module.exports = class User extends Model {
         usrData.appearance = appearance
       }
       await WIKI.models.users.query().patch(usrData).findById(id)
+      if (_.has(usrData, 'name')) {
+        const affectedPages = await WIKI.models.pages.query()
+          .select('hash')
+          .where('authorId', id)
+          .orWhere('creatorId', id)
+        for (const page of affectedPages) {
+          await WIKI.models.pages.deletePageFromCache(page.hash)
+          WIKI.events.outbound.emit('deletePageFromCache', page.hash)
+        }
+      }
     } else {
       throw new WIKI.Error.UserNotFound()
     }
@@ -814,48 +824,67 @@ module.exports = class User extends Model {
       // Check if email already exists
       const usr = await WIKI.models.users.query().findOne({ email, providerKey: 'local' })
       if (!usr) {
-        // Create the account
-        const newUsr = await WIKI.models.users.query().insert({
-          provider: 'local',
-          email,
-          name,
-          password,
-          locale: 'en',
-          defaultEditor: 'markdown',
-          tfaIsActive: false,
-          isSystem: false,
-          isActive: true,
-          isVerified: false
-        })
-
-        // Assign to group(s)
-        if (_.get(localStrg, 'autoEnrollGroups.v', []).length > 0) {
-          await newUsr.$relatedQuery('groups').relate(localStrg.autoEnrollGroups.v)
-        }
-
-        if (verify) {
-          // Create verification token
-          const verificationToken = await WIKI.models.userKeys.generateToken({
-            kind: 'verify',
-            userId: newUsr.id
+        let trx = await WIKI.models.Objection.transaction.start(WIKI.models.knex)
+        try {
+          // Create the account
+          const newUsr = await WIKI.models.users.query(trx).insert({
+            provider: 'local',
+            email,
+            name,
+            password,
+            locale: 'en',
+            defaultEditor: 'markdown',
+            tfaIsActive: false,
+            isSystem: false,
+            isActive: true,
+            isVerified: false
           })
 
-          // Send verification email
-          await WIKI.mail.send({
-            template: 'accountVerify',
-            to: email,
-            subject: 'Verify your account',
-            data: {
-              preheadertext: 'Verify your account in order to gain access to the wiki.',
-              title: 'Verify your account',
-              content: 'Click the button below in order to verify your account and gain access to the wiki.',
-              buttonLink: `${WIKI.config.host}/verify/${verificationToken}`,
-              buttonText: 'Verify'
-            },
-            text: `You must open the following link in your browser to verify your account and gain access to the wiki: ${WIKI.config.host}/verify/${verificationToken}`
-          })
+          // Assign to group(s)
+          if (_.get(localStrg, 'autoEnrollGroups.v', []).length > 0) {
+            await newUsr.$relatedQuery('groups', trx).relate(localStrg.autoEnrollGroups.v)
+          }
+
+          if (verify) {
+            // Create verification token
+            const verificationToken = await WIKI.models.userKeys.generateToken({
+              kind: 'verify',
+              userId: newUsr.id,
+              trx
+            })
+
+            // Send verification email. Recipient-specific SMTP failures must not
+            // disclose whether an address exists on an allowed domain.
+            try {
+              await WIKI.mail.send({
+                template: 'accountVerify',
+                to: email,
+                subject: 'Verify your account',
+                data: {
+                  preheadertext: 'Verify your account in order to gain access to the wiki.',
+                  title: 'Verify your account',
+                  content: 'Click the button below in order to verify your account and gain access to the wiki.',
+                  buttonLink: `${WIKI.config.host}/verify/${verificationToken}`,
+                  buttonText: 'Verify'
+                },
+                text: `You must open the following link in your browser to verify your account and gain access to the wiki: ${WIKI.config.host}/verify/${verificationToken}`
+              })
+            } catch (mailErr) {
+              WIKI.logger.warn(`Registration verification email could not be delivered: ${mailErr.message}`)
+              await trx.rollback()
+              trx = null
+              return true
+            }
+          }
+          await trx.commit()
+          trx = null
+          return true
+        } catch (err) {
+          if (trx) {
+            await trx.rollback()
+          }
+          throw err
         }
-        return true
       } else {
         throw new WIKI.Error.AuthAccountAlreadyExists()
       }

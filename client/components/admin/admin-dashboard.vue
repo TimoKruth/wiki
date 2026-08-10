@@ -40,7 +40,7 @@
               :formatValue='round'
               easing='easeOutQuint'
               )
-      v-flex(xs12 md6 lg12 xl3 d-flex)
+      v-flex(xs12 md6 lg12 xl3 d-flex, v-if='hasPermission(`manage:system`)')
         v-card.dashboard-card.animated.fadeInUp.wait-p6s(
           :class='isLatestVersion ? "green" : "red lighten-2"'
           dark

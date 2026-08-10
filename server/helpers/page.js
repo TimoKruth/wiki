@@ -19,6 +19,67 @@ const extToContent = _.invert(contentToExt)
 
 module.exports = {
   /**
+   * Check whether a path segment is an active site locale.
+   */
+  isLocaleSegment (segment) {
+    if (!localeSegmentRegex.test(segment)) {
+      return false
+    }
+    const activeLocales = _.uniq([
+      _.get(WIKI.config, 'lang.code', 'en'),
+      ..._.get(WIKI.config, 'lang.namespaces', [])
+    ]).map(locale => locale.toLowerCase())
+    return activeLocales.includes(segment.toLowerCase())
+  },
+  /**
+   * Build a public page href using the site's locale mode.
+   */
+  getPageHref ({ locale, path: pagePath }) {
+    return WIKI.config.lang.namespacing ? `/${locale}/${pagePath}` : `/${pagePath}`
+  },
+  /**
+   * Normalize a configured navigation target for the page's active locale.
+   */
+  resolveNavigationHref ({ target, targetType, locale }) {
+    if (['external', 'externalblank', 'search'].includes(targetType)) {
+      return target
+    }
+    if (targetType === 'home') {
+      return WIKI.config.lang.namespacing ? `/${locale}/home` : '/'
+    }
+    let targetPath = _.trimStart(target || '', '/')
+    const targetParts = targetPath.split('/')
+    if (this.isLocaleSegment(targetParts[0])) {
+      targetParts.shift()
+      targetPath = targetParts.join('/')
+    }
+    return this.getPageHref({ locale, path: targetPath })
+  },
+  /**
+   * Resolve a page link using browser URL semantics.
+   */
+  resolvePageHref (href, { locale, path: pagePath, absolute = false }) {
+    const origin = 'http://wikijs.local'
+    let target = href
+    if (WIKI.config.lang.namespacing) {
+      if (_.startsWith(target, '/')) {
+        const firstSegment = target.split('/')[1]
+        if (!this.isLocaleSegment(firstSegment)) {
+          target = `/${locale}${target}`
+        }
+      } else {
+        const basePath = absolute ? `/${locale}/` : `/${locale}/${pagePath}`
+        const parsedTarget = new URL(target, `${origin}${basePath}`)
+        target = `${parsedTarget.pathname}${parsedTarget.search}${parsedTarget.hash}`
+      }
+    } else if (!_.startsWith(target, '/')) {
+      const basePath = absolute ? '/' : `/${pagePath}`
+      const parsedTarget = new URL(target, `${origin}${basePath}`)
+      target = `${parsedTarget.pathname}${parsedTarget.search}${parsedTarget.hash}`
+    }
+    return target
+  },
+  /**
    * Parse raw url path and make it safe
    */
   parsePath (rawPath, opts = {}) {
@@ -46,7 +107,7 @@ module.exports = {
     if (pathParts[0].length === 1) {
       pathParts.shift()
     }
-    if (localeSegmentRegex.test(pathParts[0])) {
+    if (this.isLocaleSegment(pathParts[0])) {
       pathObj.locale = pathParts[0]
       pathObj.explicitLocale = true
       pathParts.shift()

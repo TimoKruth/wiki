@@ -113,6 +113,8 @@ router.get(['/e', '/e/*'], async (req, res, next) => {
   // -> Set Editor Lang
   _.set(res, 'locals.siteConfig.lang', pageArgs.locale)
   _.set(res, 'locals.siteConfig.rtl', req.i18n.dir() === 'rtl')
+  const markdownRenderer = await WIKI.models.renderers.query().findById('markdownCore').select('config')
+  _.set(res, 'locals.siteConfig.markdownLinebreaks', _.get(markdownRenderer, 'config.linebreaks', true))
 
   // -> Check for reserved path
   if (pageHelper.isReservedPath(pageArgs.path)) {
@@ -486,7 +488,11 @@ router.get('/*', async (req, res, next) => {
           l: n.label,
           c: n.icon,
           y: n.targetType,
-          t: n.target
+          t: pageHelper.resolveNavigationHref({
+            target: n.target,
+            targetType: n.targetType,
+            locale: pageArgs.locale
+          })
         }))
 
         // -> Build theme code injection

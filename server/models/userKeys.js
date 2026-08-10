@@ -44,9 +44,9 @@ module.exports = class UserKey extends Model {
     this.createdAt = DateTime.utc().toISO()
   }
 
-  static async generateToken ({ userId, kind }, context) {
+  static async generateToken ({ userId, kind, trx }, context) {
     const token = await nanoid()
-    await WIKI.models.userKeys.query().insert({
+    await WIKI.models.userKeys.query(trx).insert({
       kind,
       token,
       validUntil: DateTime.utc().plus({ days: 1 }).toISO(),

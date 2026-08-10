@@ -173,8 +173,8 @@ module.exports = {
     async singleByPath(obj, args, context, info) {
       let page = await WIKI.models.pages.getPageFromDb({
         path: args.path,
-        locale: args.locale,
-      });
+        locale: args.locale
+      })
       if (page) {
         if (WIKI.auth.checkAccess(context.req.user, ['manage:pages', 'delete:pages'], {
           path: page.path,
@@ -479,8 +479,13 @@ module.exports = {
       try {
         const tagToDel = await WIKI.models.tags.query().findById(args.id)
         if (tagToDel) {
+          const affectedPages = await tagToDel.$relatedQuery('pages').select('pages.hash')
           await tagToDel.$relatedQuery('pages').unrelate()
           await WIKI.models.tags.query().deleteById(args.id)
+          for (const page of affectedPages) {
+            await WIKI.models.pages.deletePageFromCache(page.hash)
+            WIKI.events.outbound.emit('deletePageFromCache', page.hash)
+          }
         } else {
           throw new Error('This tag does not exist.')
         }

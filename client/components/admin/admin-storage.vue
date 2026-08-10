@@ -59,13 +59,13 @@
                     v-icon(color='white') mdi-check-circle
                   v-list-item-content
                     v-list-item-title.body-2 {{tgt.title}}
-                    v-list-item-subtitle.green--text.caption {{$t('admin:storage.lastSync', { time: $options.filters.moment(tgt.lastAttempt, 'from') })}}
+                    v-list-item-subtitle.storage-status-description.green--text.caption {{$t('admin:storage.lastSync', { time: $options.filters.moment(tgt.lastAttempt, 'from') })}}
                 template(v-else)
                   v-list-item-avatar(color='red')
                     v-icon(color='white') mdi-close-circle-outline
                   v-list-item-content
                     v-list-item-title.body-2 {{tgt.title}}
-                    v-list-item-subtitle.red--text.caption {{$t('admin:storage.lastSyncAttempt', { time: $options.filters.moment(tgt.lastAttempt, 'from') })}}
+                    v-list-item-subtitle.storage-status-description.red--text.caption {{$t('admin:storage.lastSyncAttempt', { time: $options.filters.moment(tgt.lastAttempt, 'from') })}}
                   v-list-item-action
                     v-menu
                       template(v-slot:activator='{ on }')
@@ -367,6 +367,12 @@ export default {
     max-width: 100%;
     max-height: 50px;
   }
+}
+
+.storage-status-description {
+  overflow: visible;
+  text-overflow: initial;
+  white-space: normal;
 }
 
 </style>

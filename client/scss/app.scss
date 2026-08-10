@@ -28,4 +28,11 @@
 @import 'pages/welcome';
 @import 'pages/error';
 
+.v-application {
+  code[class*='language-'],
+  pre[class*='language-'] {
+    text-shadow: none;
+  }
+}
+
 @import 'layout/_rtl';

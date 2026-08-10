@@ -1,8 +1,8 @@
-query {
+query($manageSystem: Boolean!) {
   system {
     info {
-      currentVersion
-      latestVersion
+      currentVersion @include(if: $manageSystem)
+      latestVersion @include(if: $manageSystem)
       groupsTotal
       pagesTotal
       usersTotal

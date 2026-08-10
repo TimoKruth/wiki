@@ -1,7 +1,6 @@
 const express = require('express')
 const router = express.Router()
 const _ = require('lodash')
-const qs = require('querystring')
 
 /* global WIKI */
 
@@ -28,7 +27,9 @@ router.get('/.well-known/acme-challenge/:token', (req, res, next) => {
  */
 router.all('/*', (req, res, next) => {
   if (WIKI.config.server.sslRedir && !req.secure && WIKI.servers.servers.https) {
-    return res.redirect(`https://${req.hostname}${req.originalUrl}`)
+    const httpsPort = Number(WIKI.config.ssl.port)
+    const authority = httpsPort && httpsPort !== 443 ? `${req.hostname}:${httpsPort}` : req.hostname
+    return res.redirect(`https://${authority}${req.originalUrl}`)
   } else {
     next()
   }

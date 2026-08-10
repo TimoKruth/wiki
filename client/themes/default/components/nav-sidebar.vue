@@ -51,7 +51,7 @@
             v-icon(small) mdi-folder-open
           v-list-item-title {{ item.title }}
         v-divider.mt-2
-        v-list-item.mt-2(v-if='currentParent.pageId > 0', :href='`/` + currentParent.locale + `/` + currentParent.path', :key='`directorypage-` + currentParent.id', :input-value='path === currentParent.path')
+        v-list-item.mt-2(v-if='currentParent.pageId > 0', :href='pageTarget(currentParent.locale, currentParent.path)', :key='`directorypage-` + currentParent.id', :input-value='path === currentParent.path')
           v-list-item-avatar(size='24')
             v-icon mdi-text-box
           v-list-item-title {{ currentParent.title }}
@@ -61,7 +61,7 @@
           v-list-item-avatar(size='24')
             v-icon mdi-folder
           v-list-item-title {{ item.title }}
-        v-list-item(v-else, :href='`/` + item.locale + `/` + item.path', :key='`childpage-` + item.id', :input-value='path === item.path')
+        v-list-item(v-else, :href='pageTarget(item.locale, item.path)', :key='`childpage-` + item.id', :input-value='path === item.path')
           v-list-item-avatar(size='24')
             v-icon mdi-text-box
           v-list-item-title {{ item.title }}
@@ -112,7 +112,11 @@ export default {
   methods: {
     switchMode (mode) {
       this.currentMode = mode
-      window.localStorage.setItem('navPref', mode)
+      try {
+        window.localStorage.setItem('navPref', mode)
+      } catch (err) {
+        // Web Storage can be denied by browser privacy settings.
+      }
       if (mode === `browse` && this.loadedCache.length < 1) {
         this.loadFromCurrentPath()
       }
@@ -219,6 +223,9 @@ export default {
     },
     goHome () {
       window.location.assign(siteLangs.length > 0 ? `/${this.locale}/home` : '/')
+    },
+    pageTarget (locale, path) {
+      return siteLangs.length > 0 ? `/${locale}/${path}` : `/${path}`
     }
   },
   mounted () {
@@ -228,7 +235,11 @@ export default {
     } else if (this.navMode === 'STATIC') {
       this.currentMode = 'custom'
     } else {
-      this.currentMode = window.localStorage.getItem('navPref') || 'custom'
+      try {
+        this.currentMode = window.localStorage.getItem('navPref') || 'custom'
+      } catch (err) {
+        this.currentMode = 'custom'
+      }
     }
     if (this.currentMode === 'browse') {
       this.loadFromCurrentPath()
