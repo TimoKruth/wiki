@@ -18,7 +18,14 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v6
       
-      - name: Package and Push Chart
+      - name: Lint and Package Chart
+        run: |
+          export CHARTVER=$(yq '.version' dev/helm/Chart.yaml)
+          helm lint dev/helm/
+          helm package --version="$CHARTVER" dev/helm/
+
+      - name: Push Chart
+        if: github.repository == 'requarks/wiki'
         run: |
           export CHARTVER=$(yq '.version' dev/helm/Chart.yaml)
           helm plugin install https://github.com/chartmuseum/helm-push.git

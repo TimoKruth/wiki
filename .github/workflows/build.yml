@@ -23,15 +23,31 @@ jobs:
 
     - name: Set Build Variables
       run: |
+        IMAGE_REPO="ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+        echo "IMAGE_REPO=$IMAGE_REPO" >> "$GITHUB_ENV"
+
         if [[ "$GITHUB_REF" =~ ^refs/tags/v* ]]; then
           echo "Using TAG mode: $GITHUB_REF_NAME"
-          echo "REL_VERSION=$GITHUB_REF_NAME" >> $GITHUB_ENV
-          echo "REL_VERSION_STRICT=${GITHUB_REF_NAME#?}" >> $GITHUB_ENV
+          REL_VERSION="$GITHUB_REF_NAME"
+          REL_VERSION_STRICT="${GITHUB_REF_NAME#?}"
         else
           echo "Using BRANCH mode: v$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER"
-          echo "REL_VERSION=v$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
-          echo "REL_VERSION_STRICT=$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+          REL_VERSION="v$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER"
+          REL_VERSION_STRICT="$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER"
         fi
+        echo "REL_VERSION=$REL_VERSION" >> "$GITHUB_ENV"
+        echo "REL_VERSION_STRICT=$REL_VERSION_STRICT" >> "$GITHUB_ENV"
+
+        {
+          echo 'IMAGE_TAGS<<EOF'
+          if [[ "$IMAGE_REPO" == "ghcr.io/requarks/wiki" ]]; then
+            echo "requarks/wiki:canary"
+            echo "requarks/wiki:canary-$REL_VERSION_STRICT"
+          fi
+          echo "$IMAGE_REPO:canary"
+          echo "$IMAGE_REPO:canary-$REL_VERSION_STRICT"
+          echo 'EOF'
+        } >> "$GITHUB_ENV"
 
     - name: Disable DEV Flag + Set Version
       run: |
@@ -42,6 +58,7 @@ jobs:
         cat package.json
 
     - name: Login to DockerHub
+      if: github.repository == 'requarks/wiki'
       uses: docker/login-action@v4
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -62,16 +79,12 @@ jobs:
         context: .
         file: dev/build/Dockerfile
         push: true
-        tags: |
-          requarks/wiki:canary
-          requarks/wiki:canary-${{ env.REL_VERSION_STRICT }}
-          ghcr.io/requarks/wiki:canary
-          ghcr.io/requarks/wiki:canary-${{ env.REL_VERSION_STRICT }}
+        tags: ${{ env.IMAGE_TAGS }}
 
     - name: Extract compiled files
       run: |
         mkdir -p _dist
-        docker create --name wiki ghcr.io/requarks/wiki:canary-$REL_VERSION_STRICT
+        docker create --name wiki "$IMAGE_REPO:canary-$REL_VERSION_STRICT"
         docker cp wiki:/wiki _dist
         docker rm wiki
         rm _dist/wiki/config.yml
@@ -88,6 +101,8 @@ jobs:
     name: Run Cypress Tests
     runs-on: ubuntu-latest
     needs: [build]
+    permissions:
+      packages: read
 
     strategy:
       matrix:
@@ -96,15 +111,25 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Set Test Variables
       run: |
+        IMAGE_REPO="ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
         if [[ "$GITHUB_REF" =~ ^refs/tags/v* ]]; then
           echo "Using TAG mode: $GITHUB_REF_NAME"
-          echo "REL_VERSION_STRICT=${GITHUB_REF_NAME#?}" >> $GITHUB_ENV
+          REL_VERSION_STRICT="${GITHUB_REF_NAME#?}"
         else
           echo "Using BRANCH mode: v$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER"
-          echo "REL_VERSION_STRICT=$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+          REL_VERSION_STRICT="$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER"
         fi
+        echo "REL_VERSION_STRICT=$REL_VERSION_STRICT" >> "$GITHUB_ENV"
+        echo "WIKI_IMAGE=$IMAGE_REPO:canary-$REL_VERSION_STRICT" >> "$GITHUB_ENV"
 
     - name: Run Tests
       env:
@@ -113,7 +138,11 @@ jobs:
       run: |
         chmod u+x dev/cypress/ci-setup.sh
         dev/cypress/ci-setup.sh
-        docker run --name cypress --ipc=host --shm-size 1G -v $GITHUB_WORKSPACE:/e2e -w /e2e cypress/included:4.9.0 --record --key "$CYPRESS_KEY" --headless --group "$MATRIXENV" --ci-build-id "$REL_VERSION_STRICT-run$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT" --tag "$REL_VERSION_STRICT" --config baseUrl=http://172.17.0.1:3000
+        CYPRESS_ARGS=(--headless --config baseUrl=http://172.17.0.1:3000)
+        if [[ -n "$CYPRESS_KEY" ]]; then
+          CYPRESS_ARGS+=(--record --key "$CYPRESS_KEY" --group "$MATRIXENV" --ci-build-id "$REL_VERSION_STRICT-run$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT" --tag "$REL_VERSION_STRICT")
+        fi
+        docker run --name cypress --ipc=host --shm-size 1G -v "$GITHUB_WORKSPACE:/e2e" -w /e2e cypress/included:4.9.0 "${CYPRESS_ARGS[@]}"
 
   arm:
     name: ARM Build
@@ -127,13 +156,26 @@ jobs:
 
     - name: Set Version Variables
       run: |
+        IMAGE_REPO="ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+        echo "IMAGE_REPO=$IMAGE_REPO" >> "$GITHUB_ENV"
+
         if [[ "$GITHUB_REF" =~ ^refs/tags/v* ]]; then
           echo "Using TAG mode: $GITHUB_REF_NAME"
-          echo "REL_VERSION_STRICT=${GITHUB_REF_NAME#?}" >> $GITHUB_ENV
+          REL_VERSION_STRICT="${GITHUB_REF_NAME#?}"
         else
           echo "Using BRANCH mode: v$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER"
-          echo "REL_VERSION_STRICT=$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+          REL_VERSION_STRICT="$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER"
         fi
+        echo "REL_VERSION_STRICT=$REL_VERSION_STRICT" >> "$GITHUB_ENV"
+
+        {
+          echo 'IMAGE_TAGS<<EOF'
+          if [[ "$IMAGE_REPO" == "ghcr.io/requarks/wiki" ]]; then
+            echo "requarks/wiki:canary-arm64-$REL_VERSION_STRICT"
+          fi
+          echo "$IMAGE_REPO:canary-arm64-$REL_VERSION_STRICT"
+          echo 'EOF'
+        } >> "$GITHUB_ENV"
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v4
@@ -142,6 +184,7 @@ jobs:
       uses: docker/setup-buildx-action@v4
 
     - name: Login to DockerHub
+      if: github.repository == 'requarks/wiki'
       uses: docker/login-action@v4
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -175,9 +218,7 @@ jobs:
         platforms: linux/arm64
         provenance: false
         push: true
-        tags: |
-          requarks/wiki:canary-arm64-${{ env.REL_VERSION_STRICT }}
-          ghcr.io/requarks/wiki:canary-arm64-${{ env.REL_VERSION_STRICT }}
+        tags: ${{ env.IMAGE_TAGS }}
 
   windows:
     name: Windows Build
@@ -225,7 +266,7 @@ jobs:
   beta:
     name: Publish Beta Images
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'requarks/wiki'
     needs: [build, arm, windows]
     permissions:
       packages: write
@@ -264,7 +305,7 @@ jobs:
   release:
     name: Publish Release Images
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && github.repository == 'requarks/wiki'
     environment: prod
     needs: [beta]
     permissions:
