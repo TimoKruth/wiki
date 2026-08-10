@@ -41,7 +41,7 @@ module.exports = {
    * Normalize a configured navigation target for the page's active locale.
    */
   resolveNavigationHref ({ target, targetType, locale }) {
-    if (['external', 'externalblank'].includes(targetType)) {
+    if (['external', 'externalblank', 'search'].includes(targetType)) {
       return target
     }
     if (targetType === 'home') {
@@ -69,11 +69,13 @@ module.exports = {
         }
       } else {
         const basePath = absolute ? `/${locale}/` : `/${locale}/${pagePath}`
-        target = new URL(target, `${origin}${basePath}`).pathname
+        const parsedTarget = new URL(target, `${origin}${basePath}`)
+        target = `${parsedTarget.pathname}${parsedTarget.search}${parsedTarget.hash}`
       }
     } else if (!_.startsWith(target, '/')) {
       const basePath = absolute ? '/' : `/${pagePath}`
-      target = new URL(target, `${origin}${basePath}`).pathname
+      const parsedTarget = new URL(target, `${origin}${basePath}`)
+      target = `${parsedTarget.pathname}${parsedTarget.search}${parsedTarget.hash}`
     }
     return target
   },

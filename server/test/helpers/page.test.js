@@ -100,6 +100,13 @@ describe('helpers/page/resolvePageHref', () => {
     })).toBe('/guide/other-doc')
   })
 
+  it('preserves query strings and fragments on relative page links', () => {
+    expect(pageHelper.resolvePageHref('other-doc?view=compact#section', {
+      locale: 'en',
+      path: 'guide/current-doc'
+    })).toBe('/guide/other-doc?view=compact#section')
+  })
+
   it('adds the active locale when namespacing is enabled', () => {
     global.WIKI.config.lang.namespacing = true
     expect(pageHelper.resolvePageHref('other-doc', {
@@ -125,5 +132,13 @@ describe('helpers/page/resolveNavigationHref', () => {
       targetType: 'page',
       locale: 'en'
     })).toBe('/guide')
+  })
+
+  it('leaves legacy search targets unchanged', () => {
+    expect(pageHelper.resolveNavigationHref({
+      target: 'release notes',
+      targetType: 'search',
+      locale: 'en'
+    })).toBe('release notes')
   })
 })
