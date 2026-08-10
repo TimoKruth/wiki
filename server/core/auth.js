@@ -163,7 +163,7 @@ module.exports = {
         } catch (errc) {
           WIKI.logger.warn(errc)
           user = null
-          res.clearCookie('jwt', commonHelper.getCookieOpts())
+          res.clearCookie('jwt', commonHelper.getCookieOpts({ persistent: false }))
         }
       }
 

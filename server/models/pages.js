@@ -848,69 +848,32 @@ module.exports = class Page extends Model {
    * @returns {Promise} Promise with no value
    */
   static async reconnectLinks (opts) {
-    const pageHref = pageHelper.getPageHref({ locale: opts.locale, path: opts.path })
-    let replaceArgs = {
-      from: '',
-      to: ''
+    if (!['create', 'move', 'delete'].includes(opts.mode)) {
+      return false
     }
-    switch (opts.mode) {
-      case 'create':
-        replaceArgs.from = `<a href="${pageHref}" class="is-internal-link is-invalid-page">`
-        replaceArgs.to = `<a href="${pageHref}" class="is-internal-link is-valid-page">`
-        break
-      case 'move':
-        const prevPageHref = pageHelper.getPageHref({ locale: opts.sourceLocale, path: opts.sourcePath })
-        replaceArgs.from = `<a href="${prevPageHref}" class="is-internal-link is-valid-page">`
-        replaceArgs.to = `<a href="${pageHref}" class="is-internal-link is-valid-page">`
-        break
-      case 'delete':
-        replaceArgs.from = `<a href="${pageHref}" class="is-internal-link is-valid-page">`
-        replaceArgs.to = `<a href="${pageHref}" class="is-internal-link is-invalid-page">`
-        break
-      default:
-        return false
-    }
+    const lookupPath = opts.mode === 'move' ? opts.sourcePath : opts.path
+    const lookupLocale = opts.mode === 'move' ? opts.sourceLocale : opts.locale
+    const affectedPages = await WIKI.models.pages.query()
+      .column('id', 'hash', 'render')
+      .whereIn('pages.id', function () {
+        this.select('pageLinks.pageId').from('pageLinks').where({
+          'pageLinks.path': lookupPath,
+          'pageLinks.localeCode': lookupLocale
+        })
+      })
 
-    let affectedHashes = []
-    // -> Perform replace and return affected page hashes (POSTGRES only)
-    if (WIKI.config.db.type === 'postgres') {
-      const qryHashes = await WIKI.models.pages.query()
-        .returning('hash')
-        .patch({
-          render: WIKI.models.knex.raw('REPLACE(??, ?, ?)', ['render', replaceArgs.from, replaceArgs.to])
-        })
-        .whereIn('pages.id', function () {
-          this.select('pageLinks.pageId').from('pageLinks').where({
-            'pageLinks.path': opts.path,
-            'pageLinks.localeCode': opts.locale
-          })
-        })
-      affectedHashes = qryHashes.map(h => h.hash)
-    } else {
-      // -> Perform replace, then query affected page hashes (MYSQL, MARIADB, MSSQL, SQLITE only)
-      await WIKI.models.pages.query()
-        .patch({
-          render: WIKI.models.knex.raw('REPLACE(??, ?, ?)', ['render', replaceArgs.from, replaceArgs.to])
-        })
-        .whereIn('pages.id', function () {
-          this.select('pageLinks.pageId').from('pageLinks').where({
-            'pageLinks.path': opts.path,
-            'pageLinks.localeCode': opts.locale
-          })
-        })
-      const qryHashes = await WIKI.models.pages.query()
-        .column('hash')
-        .whereIn('pages.id', function () {
-          this.select('pageLinks.pageId').from('pageLinks').where({
-            'pageLinks.path': opts.path,
-            'pageLinks.localeCode': opts.locale
-          })
-        })
-      affectedHashes = qryHashes.map(h => h.hash)
+    for (const page of affectedPages) {
+      const updated = pageHelper.updateRenderedPageLinks(page.render, opts)
+      if (updated.changed) {
+        await WIKI.models.pages.query().patch({ render: updated.render }).findById(page.id)
+        await WIKI.models.pages.deletePageFromCache(page.hash)
+        WIKI.events.outbound.emit('deletePageFromCache', page.hash)
+      }
     }
-    for (const hash of affectedHashes) {
-      await WIKI.models.pages.deletePageFromCache(hash)
-      WIKI.events.outbound.emit('deletePageFromCache', hash)
+    if (opts.mode === 'move') {
+      await WIKI.models.pageLinks.query()
+        .patch({ path: opts.path, localeCode: opts.locale })
+        .where({ path: opts.sourcePath, localeCode: opts.sourceLocale })
     }
   }
 

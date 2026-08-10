@@ -42,9 +42,9 @@ module.exports = {
       return result
     }, {})
   },
-  getCookieOpts () {
+  getCookieOpts ({ persistent = true } = {}) {
     return {
-      expires: DateTime.utc().plus({ days: 365 }).toJSDate(),
+      ...(persistent ? { expires: DateTime.utc().plus({ days: 365 }).toJSDate() } : {}),
       ...(WIKI.config.host.startsWith('https://') ? { secure: true } : {})
     }
   }

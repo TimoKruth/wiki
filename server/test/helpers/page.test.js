@@ -9,6 +9,9 @@ beforeEach(() => {
         namespacing: false,
         namespaces: ['en', 'fr']
       }
+    },
+    data: {
+      reservedPaths: ['login']
     }
   }
 })
@@ -90,6 +93,14 @@ describe('helpers/page/parsePath', () => {
       explicitLocale: true
     })
   })
+
+  it('allows unconfigured two-letter folders', () => {
+    expect(pageHelper.isReservedPath('db/postgres')).toBe(false)
+  })
+
+  it('continues to reserve configured locale prefixes', () => {
+    expect(pageHelper.isReservedPath('fr/guide')).toBe(true)
+  })
 })
 
 describe('helpers/page/resolvePageHref', () => {
@@ -140,5 +151,46 @@ describe('helpers/page/resolveNavigationHref', () => {
       targetType: 'search',
       locale: 'en'
     })).toBe('release notes')
+  })
+})
+
+describe('helpers/page/updateRenderedPageLinks', () => {
+  it('validates links while preserving query strings, fragments, and other attributes', () => {
+    const result = pageHelper.updateRenderedPageLinks(
+      '<p><a title="More" href="/guide/next?view=compact#part" class="is-internal-link is-invalid-page">Next</a></p>',
+      { mode: 'create', locale: 'en', path: 'guide/next' }
+    )
+
+    expect(result.changed).toBe(true)
+    expect(result.render).toContain('href="/guide/next?view=compact#part"')
+    expect(result.render).toContain('title="More"')
+    expect(result.render).toContain('is-internal-link is-valid-page')
+  })
+
+  it('moves links while preserving query strings and fragments', () => {
+    const result = pageHelper.updateRenderedPageLinks(
+      '<a href="/guide/old?view=compact#part" class="is-internal-link is-valid-page">Old</a>',
+      {
+        mode: 'move',
+        sourceLocale: 'en',
+        sourcePath: 'guide/old',
+        locale: 'en',
+        path: 'docs/new'
+      }
+    )
+
+    expect(result.changed).toBe(true)
+    expect(result.render).toContain('href="/docs/new?view=compact#part"')
+    expect(result.render).toContain('is-internal-link is-valid-page')
+  })
+
+  it('invalidates links when a page is deleted', () => {
+    const result = pageHelper.updateRenderedPageLinks(
+      '<a href="/guide/old" class="is-internal-link is-valid-page">Old</a>',
+      { mode: 'delete', locale: 'en', path: 'guide/old' }
+    )
+
+    expect(result.changed).toBe(true)
+    expect(result.render).toContain('is-internal-link is-invalid-page')
   })
 })

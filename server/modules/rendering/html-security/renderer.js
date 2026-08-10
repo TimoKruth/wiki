@@ -7,8 +7,8 @@ module.exports = {
       const window = new JSDOM('').window
       const DOMPurify = createDOMPurify(window)
 
-      const allowedAttrs = ['v-pre', 'v-slot:tabs', 'v-slot:content', 'target']
-      const allowedTags = ['tabset', 'template']
+      const allowedAttrs = ['v-pre', 'v-slot:tabs', 'v-slot:content', 'target', 'url']
+      const allowedTags = ['tabset', 'template', 'oembed']
 
       if (config.allowDrawIoUnsafe) {
         allowedTags.push('foreignObject')
