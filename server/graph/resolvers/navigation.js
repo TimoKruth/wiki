@@ -1,4 +1,5 @@
 const graphHelper = require('../../helpers/graph')
+const navigationHelper = require('../../helpers/navigation')
 
 /* global WIKI */
 
@@ -20,6 +21,7 @@ module.exports = {
   NavigationMutation: {
     async updateTree (obj, args, context) {
       try {
+        navigationHelper.validateTree(args.tree)
         await WIKI.models.navigation.query().patch({
           config: args.tree
         }).where('key', 'site')

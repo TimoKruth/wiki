@@ -25,6 +25,7 @@ props:
   bindCredentials:
     title: Admin Bind Credentials
     type: String
+    sensitive: true
     hint: The password of the account used above for binding.
     maxWidth: 600
     order: 3

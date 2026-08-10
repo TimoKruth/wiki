@@ -3,7 +3,7 @@ const router = express.Router()
 const _ = require('lodash')
 const multer = require('multer')
 const path = require('path')
-const sanitize = require('sanitize-filename')
+const assetHelper = require('../helpers/asset')
 
 /* global WIKI */
 
@@ -76,7 +76,7 @@ router.post('/u', (req, res, next) => {
   }
 
   // Sanitize filename
-  fileMeta.originalname = sanitize(fileMeta.originalname.toLowerCase().replace(/[\s,;#]+/g, '_'))
+  fileMeta.originalname = assetHelper.sanitizeFilename(fileMeta.originalname)
 
   // Check if user can upload at path
   const assetPath = (folderId) ? hierarchy.map(h => h.slug).join('/') + `/${fileMeta.originalname}` : fileMeta.originalname

@@ -140,6 +140,7 @@
                   v-text-field.mb-3(
                     v-else
                     outlined
+                    :type='cfg.value.sensitive ? `password` : `text`'
                     :key='cfg.key'
                     :label='cfg.value.title'
                     v-model='cfg.value.value'
