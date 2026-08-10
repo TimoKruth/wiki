@@ -145,7 +145,9 @@
                             :label='$t("navigation.label")'
                             prepend-icon='mdi-format-title'
                             v-model='current.label'
+                            :rules='labelRules'
                             counter='255'
+                            maxlength='255'
                           )
                           v-text-field(
                             outlined
@@ -177,7 +179,9 @@
                             :label='$t("navigation.target")'
                             prepend-icon='mdi-near-me'
                             v-model='current.target'
-                            hide-details
+                            :rules='targetRules'
+                            counter='2048'
+                            maxlength='2048'
                           )
                           .d-flex.align-center.mt-4(v-else-if='current.targetType === "page"')
                             v-btn.ml-8(
@@ -194,6 +198,9 @@
                             :label='$t("navigation.navType.searchQuery")'
                             prepend-icon='search'
                             v-model='current.target'
+                            :rules='targetRules'
+                            counter='2048'
+                            maxlength='2048'
                           )
                         v-divider
 
@@ -210,6 +217,9 @@
                             :label='$t("navigation.label")'
                             prepend-icon='mdi-format-title'
                             v-model='current.label'
+                            :rules='labelRules'
+                            counter='255'
+                            maxlength='255'
                           )
                         v-divider
 
@@ -283,6 +293,9 @@ import draggable from 'vuedraggable'
 
 /* global siteConfig, siteLangs */
 
+const labelMaxLength = 255
+const targetMaxLength = 2048
+
 export default {
   components: {
     draggable
@@ -303,6 +316,18 @@ export default {
     }
   },
   computed: {
+    labelRules () {
+      return [
+        value => Boolean(value && value.trim()) || 'A navigation label is required.',
+        value => !value || value.length <= labelMaxLength || `Navigation labels cannot exceed ${labelMaxLength} characters.`
+      ]
+    },
+    targetRules () {
+      return [
+        value => Boolean(value && value.trim()) || 'A navigation target is required.',
+        value => !value || value.length <= targetMaxLength || `Navigation targets cannot exceed ${targetMaxLength} characters.`
+      ]
+    },
     navTypes () {
       return [
         { text: this.$t('navigation.navType.external'), value: 'external' },
@@ -385,7 +410,38 @@ export default {
       this.copyFromLocaleDialogIsShown = false
       this.currentTree = [...this.currentTree, ..._.get(_.find(this.trees, ['locale', this.copyFromLocaleCode]), 'items', null) || []]
     },
+    validateTrees () {
+      for (const tree of this.trees) {
+        for (const item of tree.items) {
+          if (['header', 'link'].includes(item.kind)) {
+            if (!_.isString(item.label) || item.label.trim().length < 1) {
+              throw new Error('Navigation link and header labels cannot be blank.')
+            }
+            if (item.label.length > labelMaxLength) {
+              throw new Error(`Navigation labels cannot exceed ${labelMaxLength} characters.`)
+            }
+          }
+          if (item.kind === 'link') {
+            if (!_.isString(item.targetType) || item.targetType.length < 1) {
+              throw new Error('Navigation links must define a target type.')
+            }
+            if (item.targetType !== 'home' && (!_.isString(item.target) || item.target.trim().length < 1)) {
+              throw new Error('Navigation link targets cannot be blank.')
+            }
+            if (_.isString(item.target) && item.target.length > targetMaxLength) {
+              throw new Error(`Navigation link targets cannot exceed ${targetMaxLength} characters.`)
+            }
+          }
+        }
+      }
+    },
     async save() {
+      try {
+        this.validateTrees()
+      } catch (err) {
+        this.$store.commit('pushGraphError', err)
+        return
+      }
       this.$store.commit(`loadingStart`, 'admin-navigation-save')
       try {
         const resp = await this.$apollo.mutate({
