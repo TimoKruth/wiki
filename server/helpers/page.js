@@ -201,6 +201,15 @@ module.exports = {
     }
   },
   /**
+   * Normalize source timestamps parsed from page front matter.
+   */
+  getSourceTimestamps (metadata = {}) {
+    return _.pickBy({
+      createdAt: normalizeTimestamp(metadata.dateCreated),
+      updatedAt: normalizeTimestamp(metadata.date)
+    }, Boolean)
+  },
+  /**
    * Check if path is a reserved path
    */
   isReservedPath(rawPath) {
@@ -256,4 +265,12 @@ module.exports = {
 
 function decodeBody ($) {
   return $.html('body').replace('<body>', '').replace('</body>', '')
+}
+
+function normalizeTimestamp (value) {
+  if (_.isNil(value) || value === '') {
+    return null
+  }
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }

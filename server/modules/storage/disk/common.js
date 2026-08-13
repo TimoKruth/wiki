@@ -80,6 +80,7 @@ module.exports = {
       locale: contentPath.locale
     })
     const newTags = !_.isNil(pageData.tags) ? _.get(pageData, 'tags', '').split(', ') : false
+    const sourceTimestamps = pageHelper.getSourceTimestamps(pageData)
     if (currentPage) {
       // Already in the DB, can mark as modified
       WIKI.logger.info(`(STORAGE/${moduleName}) Page marked as modified: ${normalizedRelPath}`)
@@ -91,6 +92,7 @@ module.exports = {
         isPublished: _.get(pageData, 'isPublished', currentPage.isPublished),
         isPrivate: false,
         content: pageData.content,
+        ...sourceTimestamps,
         user: user,
         skipStorage: true
       })
@@ -107,6 +109,7 @@ module.exports = {
         isPublished: _.get(pageData, 'isPublished', true),
         isPrivate: false,
         content: pageData.content,
+        ...sourceTimestamps,
         user: user,
         editor: pageEditor,
         skipStorage: true

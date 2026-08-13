@@ -77,6 +77,22 @@ TEST CONTENT`
   })
 })
 
+describe('helpers/page/getSourceTimestamps', () => {
+  it('normalizes YAML dates for imported pages', () => {
+    expect(pageHelper.getSourceTimestamps({
+      dateCreated: new Date('2020-01-02T03:04:05Z'),
+      date: '2021-02-03T04:05:06+02:00'
+    })).toEqual({
+      createdAt: '2020-01-02T03:04:05.000Z',
+      updatedAt: '2021-02-03T02:05:06.000Z'
+    })
+  })
+
+  it('ignores missing and invalid source dates', () => {
+    expect(pageHelper.getSourceTimestamps({ date: 'not-a-date' })).toEqual({})
+  })
+})
+
 describe('helpers/page/parsePath', () => {
   it('does not mistake an arbitrary two-letter folder for a locale', () => {
     expect(pageHelper.parsePath('/db/postgres')).toMatchObject({

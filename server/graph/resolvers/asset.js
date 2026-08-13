@@ -127,6 +127,12 @@ module.exports = {
           // Delete old asset cache
           await asset.deleteAssetCache()
 
+          // Update HTML page references to the renamed asset
+          await WIKI.models.pages.renameAssetReferences({
+            sourcePath: assetSourcePath,
+            destinationPath: assetTargetPath
+          })
+
           // Rename in Storage
           await WIKI.models.storage.assetEvent({
             event: 'renamed',
