@@ -2,6 +2,7 @@ const qs = require('querystring')
 const _ = require('lodash')
 const crypto = require('crypto')
 const path = require('path')
+const cheerio = require('cheerio')
 
 const localeSegmentRegex = /^[A-Z]{2}(-[A-Z]{2})?$/i
 const localeFolderRegex = /^([a-z]{2}(?:-[a-z]{2})?\/)?(.*)/i
@@ -78,6 +79,46 @@ module.exports = {
       target = `${parsedTarget.pathname}${parsedTarget.search}${parsedTarget.hash}`
     }
     return target
+  },
+  /**
+   * Update rendered internal links after a page is created, moved, or deleted.
+   */
+  updateRenderedPageLinks (render, opts) {
+    const $ = cheerio.load(render, {
+      decodeEntities: true
+    })
+    const fromLocale = opts.mode === 'move' ? opts.sourceLocale : opts.locale
+    const fromPath = opts.mode === 'move' ? opts.sourcePath : opts.path
+    const fromClass = opts.mode === 'create' ? 'is-invalid-page' : 'is-valid-page'
+    const toClass = opts.mode === 'delete' ? 'is-invalid-page' : 'is-valid-page'
+    let changed = false
+
+    $('a.is-internal-link').each((idx, elm) => {
+      const href = $(elm).attr('href')
+      if (!href || !$(elm).hasClass(fromClass)) {
+        return
+      }
+      try {
+        const parsedUrl = new URL(href, 'http://wikijs.local')
+        const page = this.parsePath(parsedUrl.pathname)
+        if (page.locale !== fromLocale || page.path !== fromPath) {
+          return
+        }
+        if (opts.mode === 'move') {
+          const destinationHref = this.getPageHref({ locale: opts.locale, path: opts.path })
+          $(elm).attr('href', `${destinationHref}${parsedUrl.search}${parsedUrl.hash}`)
+        }
+        $(elm).removeClass(fromClass).addClass(toClass)
+        changed = true
+      } catch (err) {
+        // Ignore malformed href values and leave the rendered link untouched.
+      }
+    })
+
+    return {
+      changed,
+      render: decodeBody($)
+    }
   },
   /**
    * Parse raw url path and make it safe
@@ -166,7 +207,7 @@ module.exports = {
     const firstSection = _.head(rawPath.split('/'))
     if (firstSection.length <= 1) {
       return true
-    } else if (localeSegmentRegex.test(firstSection)) {
+    } else if (this.isLocaleSegment(firstSection)) {
       return true
     } else if (
       _.some(WIKI.data.reservedPaths, p => {
@@ -211,4 +252,8 @@ module.exports = {
     }
     return meta
   }
+}
+
+function decodeBody ($) {
+  return $.html('body').replace('<body>', '').replace('</body>', '')
 }
