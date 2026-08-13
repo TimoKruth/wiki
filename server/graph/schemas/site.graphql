@@ -39,6 +39,7 @@ type SiteMutation {
     authEnforce2FA: Boolean
     authHideLocal: Boolean
     authLoginBgUrl: String
+    authRedirectToLoginAfterLogout: Boolean
     authJwtAudience: String
     authJwtExpiration: String
     authJwtRenewablePeriod: String
@@ -89,6 +90,7 @@ type SiteConfig {
   authEnforce2FA: Boolean
   authHideLocal: Boolean
   authLoginBgUrl: String
+  authRedirectToLoginAfterLogout: Boolean
   authJwtAudience: String
   authJwtExpiration: String
   authJwtRenewablePeriod: String

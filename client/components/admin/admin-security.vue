@@ -196,6 +196,15 @@
                     persistent-hint
                     :hint='$t(`admin:security.hideLocalLoginHint`)'
                     )
+                  v-switch(
+                    inset
+                    label='Redirect to login after logout'
+                    color='primary'
+                    v-model='config.authRedirectToLoginAfterLogout'
+                    prepend-icon='mdi-logout-variant'
+                    persistent-hint
+                    hint='Return users to the login screen after local logout. External provider logout redirects are preserved.'
+                    )
                 v-divider.mt-3
                 .overline.grey--text.pa-4 {{$t('admin:security.loginSecurity')}}
                 .px-4.pb-3
@@ -274,6 +283,7 @@ export default {
         authAutoLogin: false,
         authHideLocal: false,
         authLoginBgUrl: '',
+        authRedirectToLoginAfterLogout: false,
         authJwtAudience: 'urn:wiki.js',
         authJwtExpiration: '30m',
         authJwtRenewablePeriod: '14d'
@@ -301,6 +311,7 @@ export default {
               $authEnforce2FA: Boolean
               $authHideLocal: Boolean
               $authLoginBgUrl: String
+              $authRedirectToLoginAfterLogout: Boolean
               $authJwtAudience: String
               $authJwtExpiration: String
               $authJwtRenewablePeriod: String
@@ -324,6 +335,7 @@ export default {
                   authEnforce2FA: $authEnforce2FA,
                   authHideLocal: $authHideLocal,
                   authLoginBgUrl: $authLoginBgUrl,
+                  authRedirectToLoginAfterLogout: $authRedirectToLoginAfterLogout,
                   authJwtAudience: $authJwtAudience,
                   authJwtExpiration: $authJwtExpiration,
                   authJwtRenewablePeriod: $authJwtRenewablePeriod,
@@ -356,6 +368,7 @@ export default {
             authEnforce2FA: _.get(this.config, 'authEnforce2FA', false),
             authHideLocal: _.get(this.config, 'authHideLocal', false),
             authLoginBgUrl: _.get(this.config, 'authLoginBgUrl', ''),
+            authRedirectToLoginAfterLogout: _.get(this.config, 'authRedirectToLoginAfterLogout', false),
             authJwtAudience: _.get(this.config, 'authJwtAudience', ''),
             authJwtExpiration: _.get(this.config, 'authJwtExpiration', ''),
             authJwtRenewablePeriod: _.get(this.config, 'authJwtRenewablePeriod', ''),
@@ -409,6 +422,7 @@ export default {
               authEnforce2FA
               authHideLocal
               authLoginBgUrl
+              authRedirectToLoginAfterLogout
               authJwtAudience
               authJwtExpiration
               authJwtRenewablePeriod

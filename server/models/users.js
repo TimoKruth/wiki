@@ -162,7 +162,7 @@ module.exports = class User extends Model {
   // Model Methods
   // ------------------------------------------------
 
-  static async processProfile({ profile, providerKey }) {
+  static async processProfile({ profile, providerKey, relinkByEmail = false }) {
     const provider = _.get(WIKI.auth.strategies, providerKey, {})
     provider.info = _.find(WIKI.data.authentication, ['key', provider.stategyKey])
 
@@ -195,6 +195,21 @@ module.exports = class User extends Model {
       user = await WIKI.models.users.query().findOne({
         email: primaryEmail,
         providerId: null,
+        providerKey
+      })
+      if (user) {
+        user = await user.$query().patchAndFetch({
+          providerId: _.toString(profile.id)
+        })
+      }
+    }
+
+    // Relink an existing account after an identity provider changes its
+    // subject identifier. Providers must opt in because email ownership is
+    // the trust boundary for this recovery behavior.
+    if (!user && relinkByEmail && !_.isNil(profile.id)) {
+      user = await WIKI.models.users.query().findOne({
+        email: primaryEmail,
         providerKey
       })
       if (user) {
@@ -556,6 +571,56 @@ module.exports = class User extends Model {
   }
 
   /**
+   * Send a replacement account verification email without revealing whether
+   * the supplied address belongs to an unverified account.
+   */
+  static async loginResendVerification ({ email }) {
+    email = _.toLower(_.trim(email))
+    const usr = await WIKI.models.users.query().where({
+      email,
+      providerKey: 'local'
+    }).first()
+    if (!usr || !usr.isActive || usr.isVerified) {
+      WIKI.logger.debug(`Verification resend request for ineligible local account ${email}: [DISCARDED]`)
+      return
+    }
+
+    const verificationToken = await WIKI.models.userKeys.generateToken({
+      kind: 'verify',
+      userId: usr.id
+    })
+    try {
+      await WIKI.models.users.sendVerificationEmail({
+        email: usr.email,
+        verificationToken
+      })
+      await WIKI.models.userKeys.query()
+        .delete()
+        .where({ userId: usr.id, kind: 'verify' })
+        .whereNot('token', verificationToken)
+    } catch (mailErr) {
+      await WIKI.models.userKeys.destroyToken({ token: verificationToken })
+      WIKI.logger.warn(`Account verification email could not be resent: ${mailErr.message}`)
+    }
+  }
+
+  static async sendVerificationEmail ({ email, verificationToken }) {
+    await WIKI.mail.send({
+      template: 'accountVerify',
+      to: email,
+      subject: 'Verify your account',
+      data: {
+        preheadertext: 'Verify your account in order to gain access to the wiki.',
+        title: 'Verify your account',
+        content: 'Click the button below in order to verify your account and gain access to the wiki.',
+        buttonLink: `${WIKI.config.host}/verify/${verificationToken}`,
+        buttonText: 'Verify'
+      },
+      text: `You must open the following link in your browser to verify your account and gain access to the wiki: ${WIKI.config.host}/verify/${verificationToken}`
+    })
+  }
+
+  /**
    * Create a new user
    *
    * @param {Object} param0 User Fields
@@ -856,18 +921,9 @@ module.exports = class User extends Model {
             // Send verification email. Recipient-specific SMTP failures must not
             // disclose whether an address exists on an allowed domain.
             try {
-              await WIKI.mail.send({
-                template: 'accountVerify',
-                to: email,
-                subject: 'Verify your account',
-                data: {
-                  preheadertext: 'Verify your account in order to gain access to the wiki.',
-                  title: 'Verify your account',
-                  content: 'Click the button below in order to verify your account and gain access to the wiki.',
-                  buttonLink: `${WIKI.config.host}/verify/${verificationToken}`,
-                  buttonText: 'Verify'
-                },
-                text: `You must open the following link in your browser to verify your account and gain access to the wiki: ${WIKI.config.host}/verify/${verificationToken}`
+              await WIKI.models.users.sendVerificationEmail({
+                email,
+                verificationToken
               })
             } catch (mailErr) {
               WIKI.logger.warn(`Registration verification email could not be delivered: ${mailErr.message}`)
@@ -897,12 +953,17 @@ module.exports = class User extends Model {
    * Logout the current user
    */
   static async logout (context) {
+    const localRedirect = WIKI.config.auth.redirectToLoginAfterLogout ? (WIKI.config.auth.autoLogin ? '/login?all=1' : '/login') : '/'
     if (!context.req.user || context.req.user.id === 2) {
-      return '/'
+      return localRedirect
     }
     const usr = await WIKI.models.users.query().findById(context.req.user.id).select('providerKey')
     const provider = _.find(WIKI.auth.strategies, ['key', usr.providerKey])
-    return provider.logout ? provider.logout(provider.config, context) : '/'
+    const providerRedirect = provider.logout ? provider.logout(provider.config, context) : '/'
+    if (providerRedirect === '/') {
+      return localRedirect
+    }
+    return providerRedirect
   }
 
   static async getGuestUser () {

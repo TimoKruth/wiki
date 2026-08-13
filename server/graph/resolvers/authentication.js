@@ -151,6 +151,19 @@ module.exports = {
       }
     },
     /**
+     * Resend an account verification email
+     */
+    async resendVerification (obj, args, context) {
+      try {
+        await WIKI.models.users.loginResendVerification(args, context)
+        return {
+          responseResult: graphHelper.generateSuccess('Verification request processed.')
+        }
+      } catch (err) {
+        return graphHelper.generateError(err)
+      }
+    },
+    /**
      * Register a new account
      */
     async register (obj, args, context) {
