@@ -28,6 +28,7 @@ module.exports = {
         authEnforce2FA: WIKI.config.auth.enforce2FA,
         authHideLocal: WIKI.config.auth.hideLocal,
         authLoginBgUrl: WIKI.config.auth.loginBgUrl,
+        authRedirectToLoginAfterLogout: WIKI.config.auth.redirectToLoginAfterLogout,
         authJwtAudience: WIKI.config.auth.audience,
         authJwtExpiration: WIKI.config.auth.tokenExpiration,
         authJwtRenewablePeriod: WIKI.config.auth.tokenRenewal,
@@ -85,6 +86,7 @@ module.exports = {
           enforce2FA: _.get(args, 'authEnforce2FA', WIKI.config.auth.enforce2FA),
           hideLocal: _.get(args, 'authHideLocal', WIKI.config.auth.hideLocal),
           loginBgUrl: _.get(args, 'authLoginBgUrl', WIKI.config.auth.loginBgUrl),
+          redirectToLoginAfterLogout: _.get(args, 'authRedirectToLoginAfterLogout', WIKI.config.auth.redirectToLoginAfterLogout),
           audience: _.get(args, 'authJwtAudience', WIKI.config.auth.audience),
           tokenExpiration: _.get(args, 'authJwtExpiration', WIKI.config.auth.tokenExpiration),
           tokenRenewal: _.get(args, 'authJwtRenewablePeriod', WIKI.config.auth.tokenRenewal)

@@ -90,6 +90,14 @@
                 href='#forgot'
                 ): .caption {{ $t('auth:forgotPasswordLink') }}
               v-btn.text-none(
+                v-if='selectedStrategyKey === `local`'
+                text
+                rounded
+                color='grey darken-3'
+                @click.stop.prevent='resendVerification'
+                href='#verify'
+                ): .caption Resend verification email
+              v-btn.text-none(
                 v-if='selectedStrategyKey === `local` && selectedStrategy.selfRegistration'
                 color='indigo darken-2'
                 text
@@ -133,6 +141,45 @@
                 color='grey darken-3'
                 @click.stop.prevent='screen = `login`'
                 href='#forgot'
+                ): .caption {{ $t('auth:forgotPasswordCancel') }}
+        //-------------------------------------------------
+        //- RESEND VERIFICATION FORM
+        //-------------------------------------------------
+        template(v-if='screen === `resendVerification`')
+          .login-subtitle
+            .text-subtitle-1 Resend verification email
+          .login-info Enter the email address used to register. If it belongs to an unverified account, a new link will be sent.
+          .login-form
+            v-text-field(
+              solo
+              flat
+              prepend-inner-icon='mdi-clipboard-account'
+              background-color='white'
+              color='blue darken-2'
+              hide-details
+              ref='iptVerificationEmail'
+              v-model='username'
+              :placeholder='$t(`auth:fields.email`)'
+              type='email'
+              autocomplete='email'
+              light
+              @keyup.enter='resendVerificationSubmit'
+              )
+            v-btn.mt-2.text-none(
+              width='100%'
+              large
+              color='blue darken-2'
+              dark
+              @click='resendVerificationSubmit'
+              :loading='isLoading'
+              ) Send verification email
+            .text-center.mt-5
+              v-btn.text-none(
+                text
+                rounded
+                color='grey darken-3'
+                @click.stop.prevent='screen = `login`'
+                href='#login'
                 ): .caption {{ $t('auth:forgotPasswordCancel') }}
         //-------------------------------------------------
         //- CHANGE PASSWORD FORM
@@ -558,6 +605,59 @@ export default {
       this.$nextTick(() => {
         this.$refs.iptForgotPwdEmail.focus()
       })
+    },
+    /**
+     * SWITCH TO RESEND VERIFICATION SCREEN
+     */
+    resendVerification () {
+      this.screen = 'resendVerification'
+      this.$nextTick(() => {
+        this.$refs.iptVerificationEmail.focus()
+      })
+    },
+    /**
+     * RESEND VERIFICATION SUBMIT
+     */
+    async resendVerificationSubmit () {
+      this.loaderColor = 'grey darken-4'
+      this.loaderTitle = 'Sending verification email...'
+      this.isLoading = true
+      try {
+        const resp = await this.$apollo.mutate({
+          mutation: gql`
+            mutation ($email: String!) {
+              authentication {
+                resendVerification(email: $email) {
+                  responseResult {
+                    succeeded
+                    message
+                  }
+                }
+              }
+            }
+          `,
+          variables: {
+            email: this.username
+          }
+        })
+        const result = _.get(resp, 'data.authentication.resendVerification.responseResult', {})
+        if (!result.succeeded) {
+          throw new Error(result.message || this.$t('auth:genericError'))
+        }
+        this.$store.commit('showNotification', {
+          style: 'success',
+          message: 'If the account is awaiting verification, a new email has been sent.',
+          icon: 'email'
+        })
+        this.screen = 'login'
+      } catch (err) {
+        this.$store.commit('showNotification', {
+          style: 'red',
+          message: err.message,
+          icon: 'alert'
+        })
+      }
+      this.isLoading = false
     },
     /**
      * FORGOT PASSWORD SUBMIT

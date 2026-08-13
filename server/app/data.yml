@@ -66,6 +66,7 @@ defaults:
       enforce2FA: false
       hideLocal: false
       loginBgUrl: ''
+      redirectToLoginAfterLogout: false
       audience: 'urn:wiki.js'
       tokenExpiration: '30m'
       tokenRenewal: '14d'

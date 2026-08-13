@@ -29,6 +29,7 @@ module.exports = {
         try {
           const user = await WIKI.models.users.processProfile({
             providerKey: req.params.strategy,
+            relinkByEmail: true,
             profile: {
               id: profile.keycloakId,
               email: profile.email,

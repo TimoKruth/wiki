@@ -59,6 +59,10 @@ type AuthenticationMutation {
     email: String!
   ): DefaultResponse @rateLimit(limit: 3, duration: 60)
 
+  resendVerification(
+    email: String!
+  ): DefaultResponse @rateLimit(limit: 3, duration: 60)
+
   register(
     email: String!
     password: String!
