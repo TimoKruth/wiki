@@ -12,6 +12,7 @@ const CleanCSS = require('clean-css')
 const TurndownService = require('turndown')
 const turndownPluginGfm = require('@joplin/turndown-plugin-gfm').gfm
 const cheerio = require('cheerio')
+const assetHelper = require('../helpers/asset')
 
 /* global WIKI */
 
@@ -358,6 +359,8 @@ module.exports = class Page extends Model {
     // -> Get latest updatedAt
     page.updatedAt = await WIKI.models.pages.query().findById(page.id).select('updatedAt').then(r => r.updatedAt)
 
+    await WIKI.models.pages.applySourceTimestamps(page, opts)
+
     return page
   }
 
@@ -485,6 +488,21 @@ module.exports = class Page extends Model {
     // -> Get latest updatedAt
     page.updatedAt = await WIKI.models.pages.query().findById(page.id).select('updatedAt').then(r => r.updatedAt)
 
+    await WIKI.models.pages.applySourceTimestamps(page, opts)
+
+    return page
+  }
+
+  /**
+   * Restore source timestamps after import-time rendering and hooks have run.
+   */
+  static async applySourceTimestamps (page, opts) {
+    const timestamps = _.pickBy(_.pick(opts, ['createdAt', 'updatedAt']), Boolean)
+    if (_.isEmpty(timestamps)) {
+      return page
+    }
+    await WIKI.models.knex('pages').where('id', page.id).update(timestamps)
+    Object.assign(page, timestamps)
     return page
   }
 
@@ -809,8 +827,11 @@ module.exports = class Page extends Model {
       versionDate: page.updatedAt
     })
 
+    const relatedTags = await WIKI.models.pages.relatedQuery('tags').for(page.id).select('tags.id')
+
     // -> Delete page
     await WIKI.models.pages.query().delete().where('id', page.id)
+    await WIKI.models.tags.deleteOrphans(_.map(relatedTags, 'id'))
     await WIKI.models.pages.deletePageFromCache(page.hash)
     WIKI.events.outbound.emit('deletePageFromCache', page.hash)
 
@@ -834,6 +855,33 @@ module.exports = class Page extends Model {
       path: page.path,
       mode: 'delete'
     })
+  }
+
+  /**
+   * Rewrite stored HTML references after an asset is renamed.
+   */
+  static async renameAssetReferences ({ sourcePath, destinationPath }) {
+    const pages = await WIKI.models.pages.query()
+      .select('id', 'hash', 'content', 'render')
+      .where('contentType', 'html')
+    let affected = 0
+
+    for (const page of pages) {
+      const content = assetHelper.rewriteHtmlReferences(page.content, sourcePath, destinationPath)
+      const render = assetHelper.rewriteHtmlReferences(page.render, sourcePath, destinationPath)
+      if (!content.changed && !render.changed) {
+        continue
+      }
+      await WIKI.models.knex('pages').where('id', page.id).update({
+        ...(content.changed ? { content: content.html } : {}),
+        ...(render.changed ? { render: render.html } : {})
+      })
+      await WIKI.models.pages.deletePageFromCache(page.hash)
+      WIKI.events.outbound.emit('deletePageFromCache', page.hash)
+      affected++
+    }
+
+    return affected
   }
 
   /**

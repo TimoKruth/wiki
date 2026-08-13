@@ -98,8 +98,23 @@ module.exports = class Tag extends Model {
     const tagsToUnrelate = _.differenceBy(currentTags, targetTags, 'id')
     if (tagsToUnrelate.length > 0) {
       await page.$relatedQuery('tags').unrelate().whereIn('tags.id', _.map(tagsToUnrelate, 'id'))
+      await WIKI.models.tags.deleteOrphans(_.map(tagsToUnrelate, 'id'))
     }
 
     page.tags = targetTags
+  }
+
+  /**
+   * Delete tag rows that are no longer associated with any current page.
+   */
+  static async deleteOrphans (tagIds = []) {
+    const candidates = _.uniq(tagIds).filter(_.isSafeInteger)
+    if (candidates.length < 1) {
+      return 0
+    }
+    return WIKI.models.tags.query()
+      .delete()
+      .whereIn('id', candidates)
+      .whereNotIn('id', WIKI.models.knex('pageTags').select('tagId'))
   }
 }
