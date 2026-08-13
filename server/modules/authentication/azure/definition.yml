@@ -33,3 +33,9 @@ props:
     hint: Map groups matching names from the groups claim value
     default: false
     order: 4
+  createMissingGroups:
+    type: Boolean
+    title: Create Missing Groups
+    hint: Create non-system wiki groups when an external group identifier has no existing match.
+    default: false
+    order: 5

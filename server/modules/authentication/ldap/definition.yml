@@ -87,36 +87,42 @@ props:
   mapGroups:
     type: Boolean
     title: Map Groups
-    hint: Map groups matching names from the users LDAP/Active Directory groups. Group Search Base must also be defined for this to work. Note this will remove any groups the user has that doesn't match an LDAP/Active Directory group.
+    hint: Synchronize provider-managed groups from LDAP / Active Directory while preserving manually assigned wiki groups. Group Search Base must also be defined for this to work.
     default: false
     order: 24
+  createMissingGroups:
+    type: Boolean
+    title: Create Missing Groups
+    hint: Create non-system wiki groups when an LDAP / Active Directory group name has no existing match.
+    default: false
+    order: 25
   groupSearchBase:
     type: String
     title: Group Search Base
     hint: The base DN from which to search for groups.
     default: OU=groups,dc=example,dc=com
-    order: 25
+    order: 26
   groupSearchFilter:
     type: String
     title: Group Search Filter
     hint: LDAP search filter for groups. (member={{dn}}) will use the distinguished name of the user and will work in most cases.
     default: (member={{dn}})
-    order: 26
+    order: 27
   groupSearchScope:
     type: String
     title: Group Search Scope
     hint: How far from the Group Search Base to search for groups. sub (default) will search the entire subtree. base, will only search the Group Search Base dn. one, will search the Group Search Base dn and one additional level.
     default: sub
-    order: 27
+    order: 28
   groupDnProperty:
     type: String
     title: Group DN Property
     hint: The property of user object to use in {{dn}} interpolation of Group Search Filter.
     default: dn
-    order: 28
+    order: 29
   groupNameField:
     type: String
     title: Group Name Field
     hint: The field that contains the name of the LDAP group to match on, usually "name" or "cn".
     default: name
-    order: 29
+    order: 30

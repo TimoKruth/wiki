@@ -15,12 +15,12 @@ module.exports = {
     // cookieEncryptionKeys is extracted from conf.cookieEncryptionKeyString.
     // It's a concatnation of 44-character length strings each of which represents a single pair of key/iv.
     // Valid cookieEncryptionKeys enables both cookieSameSite and useCookieInsteadOfSession.
-    const keyArray = [];
+    const keyArray = []
     if (conf.cookieEncryptionKeyString) {
-      let keyString = conf.cookieEncryptionKeyString;
+      let keyString = conf.cookieEncryptionKeyString
       while (keyString.length >= 44) {
-        keyArray.push({ key: keyString.substring(0, 32), iv: keyString.substring(32, 44) });
-        keyString = keyString.substring(44);
+        keyArray.push({ key: keyString.substring(0, 32), iv: keyString.substring(32, 44) })
+        keyString = keyString.substring(44)
       }
     }
     passport.use(conf.key,
@@ -50,15 +50,13 @@ module.exports = {
           })
           if (conf.mapGroups) {
             const groups = _.get(profile, '_json.groups')
-            if (groups && _.isArray(groups)) {
-              const currentGroups = (await user.$relatedQuery('groups').select('groups.id')).map(g => g.id)
-              const expectedGroups = Object.values(WIKI.auth.groups).filter(g => groups.includes(g.name)).map(g => g.id)
-              for (const groupId of _.difference(expectedGroups, currentGroups)) {
-                await user.$relatedQuery('groups').relate(groupId)
-              }
-              for (const groupId of _.difference(currentGroups, expectedGroups)) {
-                await user.$relatedQuery('groups').unrelate().where('groupId', groupId)
-              }
+            if (!_.isNil(groups)) {
+              await WIKI.models.groups.syncExternalMemberships({
+                user,
+                providerKey: req.params.strategy,
+                groupNames: groups,
+                createMissingGroups: conf.createMissingGroups
+              })
             }
           }
           cb(null, user)
