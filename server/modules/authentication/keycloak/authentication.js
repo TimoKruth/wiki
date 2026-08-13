@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const jwt = require('jsonwebtoken')
 
 /* global WIKI */
 
@@ -36,6 +37,18 @@ module.exports = {
               picture: ''
             }
           })
+          if (conf.mapGroups) {
+            const claims = jwt.decode(results.id_token) || {}
+            const groups = _.get(claims, conf.groupsClaim)
+            if (!_.isNil(groups)) {
+              await WIKI.models.groups.syncExternalMemberships({
+                user,
+                providerKey: req.params.strategy,
+                groupNames: groups,
+                createMissingGroups: conf.createMissingGroups
+              })
+            }
+          }
           req.session.keycloak_id_token = results.id_token
           cb(null, user)
         } catch (err) {

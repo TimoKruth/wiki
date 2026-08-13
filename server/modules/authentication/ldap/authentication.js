@@ -52,14 +52,12 @@ module.exports = {
             const ldapGroups = _.get(profile, '_groups')
             if (ldapGroups && _.isArray(ldapGroups)) {
               const groups = ldapGroups.map(g => g[conf.groupNameField])
-              const currentGroups = (await user.$relatedQuery('groups').select('groups.id')).map(g => g.id)
-              const expectedGroups = Object.values(WIKI.auth.groups).filter(g => groups.includes(g.name)).map(g => g.id)
-              for (const groupId of _.difference(expectedGroups, currentGroups)) {
-                await user.$relatedQuery('groups').relate(groupId)
-              }
-              for (const groupId of _.difference(currentGroups, expectedGroups)) {
-                await user.$relatedQuery('groups').unrelate().where('groupId', groupId)
-              }
+              await WIKI.models.groups.syncExternalMemberships({
+                user,
+                providerKey: req.params.strategy,
+                groupNames: groups,
+                createMissingGroups: conf.createMissingGroups
+              })
             }
           }
           cb(null, user)

@@ -62,4 +62,22 @@ props:
     title: Legacy Logout Redirect
     hint: Pass the legacy 'redirect_uri' parameter to the logout endpoint. Leave disabled for Keycloak 18 and above.
     order: 10
-
+  mapGroups:
+    type: Boolean
+    title: Map Groups
+    hint: Synchronize provider-managed groups from an ID token claim while preserving manually assigned wiki groups.
+    default: false
+    order: 11
+  groupsClaim:
+    type: String
+    title: Groups Claim
+    hint: ID token claim containing group or role names, for example realm_access.roles.
+    default: realm_access.roles
+    maxWidth: 500
+    order: 12
+  createMissingGroups:
+    type: Boolean
+    title: Create Missing Groups
+    hint: Create non-system wiki groups when a Keycloak role or group has no existing match.
+    default: false
+    order: 13

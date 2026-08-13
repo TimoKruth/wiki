@@ -165,7 +165,7 @@ props:
   mapGroups:
     type: Boolean
     title: Map Groups
-    hint: Map groups matching names from the provider user groups. User Groups Field Mapping must also be defined for this to work. Note this will remove any groups the user has that doesn't match any group from the provider.
+    hint: Synchronize provider-managed groups while preserving manually assigned wiki groups. User Groups Field Mapping must also be defined for this to work.
     default: false
     order: 44
   mappingGroups:
@@ -174,3 +174,9 @@ props:
     default: 'memberOf'
     hint: The field storing the user groups attribute (when Map Groups is enabled). Can be a variable name or a URI-formatted string.
     order: 45
+  createMissingGroups:
+    type: Boolean
+    title: Create Missing Groups
+    hint: Create non-system wiki groups when a provider group name has no existing match.
+    default: false
+    order: 46

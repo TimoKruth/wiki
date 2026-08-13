@@ -74,25 +74,31 @@ props:
     default: groups
     maxWidth: 500
     order: 11
+  createMissingGroups:
+    type: Boolean
+    title: Create Missing Groups
+    hint: Create non-system wiki groups when an external group name has no existing match.
+    default: false
+    order: 12
   logoutURL:
     type: String
     title: Logout URL
     hint: (optional) Logout URL on the OAuth2 provider where the user will be redirected to complete the logout process.
-    order: 12
+    order: 13
   scope:
     type: String
     title: Scope
     hint: (optional) Application Client permission scopes.
-    order: 13
+    order: 14
   useQueryStringForAccessToken:
     type: Boolean
     default: false
     title: Pass access token via GET query string to User Info Endpoint
     hint: (optional) Pass the access token in an `access_token` parameter attached to the GET query string of the User Info Endpoint URL. Otherwise the access token will be passed in the Authorization header.
-    order: 14
+    order: 15
   enableCSRFProtection:
     type: Boolean
     default: true
     title: Enable CSRF protection
     hint: Pass a nonce state parameter during authentication to protect against CSRF attacks.
-    order: 15
+    order: 16
