@@ -51,7 +51,6 @@
                     persistent-hint
                     :hint='$t(`admin:theme.darkModeHint`)'
                     )
-
               v-card.mt-3.animated.fadeInUp.wait-p1s
                 v-toolbar(color='primary', dark, dense, flat)
                   v-toolbar-title.subtitle-1 {{$t(`admin:theme.options`)}}
@@ -65,6 +64,15 @@
                     persistent-hint
                     hint='Select whether the table of contents is shown on the left, right or not at all.'
                     )
+                  v-range-slider(
+                    prepend-icon='mdi-menu-open'
+                    label='Heading Levels in ToC'
+                    v-model='tocRange'
+                    :min='1'
+                    :max='6'
+                    :tick-labels='["H1", "H2", "H3", "H4", "H5", "H6"]'
+                    hint='Select which levels of the toc are displayed.'
+                  )
             v-flex(lg6 xs12)
               //- v-card.animated.fadeInUp.wait-p2s
               //-   v-toolbar(color='teal', dark, dense, flat)
@@ -150,6 +158,10 @@ export default {
       config: {
         theme: 'default',
         darkMode: false,
+        tocDepth: {
+          min: 1,
+          max: 2
+        },
         iconset: '',
         tocPosition: 'left',
         injectCSS: '',
@@ -160,6 +172,18 @@ export default {
     }
   },
   computed: {
+    tocRange: {
+      get() {
+        var range = [this.config.tocDepth.min, this.config.tocDepth.max]
+        return range
+      },
+      set(value) {
+        this.config.tocDepth = {
+          min: parseInt(value[0]),
+          max: parseInt(value[1])
+        }
+      }
+    },
     darkMode: sync('site/dark'),
     headers() {
       return [
@@ -213,6 +237,7 @@ export default {
             theme: this.config.theme,
             iconset: this.config.iconset,
             darkMode: this.darkMode,
+            tocDepth: this.config.tocDepth,
             tocPosition: this.config.tocPosition,
             injectCSS: this.config.injectCSS,
             injectHead: this.config.injectHead,

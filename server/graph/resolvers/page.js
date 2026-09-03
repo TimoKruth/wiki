@@ -628,6 +628,15 @@ module.exports = {
   Page: {
     async tags (obj) {
       return WIKI.models.pages.relatedQuery('tags').for(obj.id)
+    },
+    tocDepth (obj) {
+      return {
+        min: _.get(obj, 'tocOptions.min', 1),
+        max: _.get(obj, 'tocOptions.max', 2)
+      }
+    },
+    useDefaultTocDepth (obj) {
+      return _.get(obj, 'tocOptions.useDefault', true)
     }
     // comments(pg) {
     //   return pg.$relatedQuery('comments')

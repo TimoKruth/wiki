@@ -2,7 +2,7 @@
   v-app(:dark='$vuetify.theme.dark').tags
     nav-header
     v-navigation-drawer.pb-0.elevation-1(
-      app
+      :app='$vuetify.breakpoint.mdAndUp'
       fixed
       clipped
       :right='$vuetify.rtl'
@@ -371,6 +371,13 @@ export default {
     min-height: 58px;
     padding-top: 8px;
     padding-bottom: 8px;
+  }
+}
+
+@media (max-width: 959px) {
+  .tags > .v-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 }
 

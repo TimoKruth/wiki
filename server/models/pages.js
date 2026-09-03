@@ -48,7 +48,6 @@ module.exports = class Page extends Model {
         publishEndDate: {type: 'string'},
         content: {type: 'string'},
         contentType: {type: 'string'},
-
         createdAt: {type: 'string'},
         updatedAt: {type: 'string'}
       }
@@ -56,7 +55,7 @@ module.exports = class Page extends Model {
   }
 
   static get jsonAttributes() {
-    return ['extra']
+    return ['extra', 'tocOptions']
   }
 
   static get relationMappings() {
@@ -163,6 +162,11 @@ module.exports = class Page extends Model {
       },
       title: 'string',
       toc: 'string',
+      tocOptions: {
+        min: 'uint',
+        max: 'uint',
+        useDefault: 'boolean'
+      },
       updatedAt: 'string'
     })
   }
@@ -313,6 +317,11 @@ module.exports = class Page extends Model {
       publishStartDate: opts.publishStartDate || '',
       title: opts.title,
       toc: '[]',
+      tocOptions: JSON.stringify({
+        min: _.get(opts, 'tocDepth.min', 1),
+        max: _.get(opts, 'tocDepth.max', 2),
+        useDefault: opts.useDefaultTocDepth !== false
+      }),
       extra: JSON.stringify({
         js: scriptJs,
         css: scriptCss
@@ -434,6 +443,11 @@ module.exports = class Page extends Model {
       publishEndDate: opts.publishEndDate || '',
       publishStartDate: opts.publishStartDate || '',
       title: opts.title,
+      tocOptions: JSON.stringify({
+        min: _.get(opts, 'tocDepth.min', ogPage.tocOptions.min || 1),
+        max: _.get(opts, 'tocDepth.max', ogPage.tocOptions.max || 2),
+        useDefault: _.get(opts, 'useDefaultTocDepth', ogPage.tocOptions.useDefault !== false)
+      }),
       extra: JSON.stringify({
         ...ogPage.extra,
         js: scriptJs,
@@ -1003,6 +1017,7 @@ module.exports = class Page extends Model {
           'pages.content',
           'pages.render',
           'pages.toc',
+          'pages.tocOptions',
           'pages.contentType',
           'pages.createdAt',
           'pages.updatedAt',
@@ -1084,6 +1099,7 @@ module.exports = class Page extends Model {
       tags: page.tags.map(t => _.pick(t, ['tag', 'title'])),
       title: page.title,
       toc: _.isString(page.toc) ? page.toc : JSON.stringify(page.toc),
+      tocOptions: page.tocOptions,
       updatedAt: page.updatedAt
     }))
   }
